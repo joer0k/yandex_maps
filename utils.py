@@ -5,13 +5,14 @@ from urllib3 import Retry
 API_KEY = '371e1360-5397-45a5-9639-2e7da34bd060'
 
 
-def get_static_api_image(ll, z, size):
+def get_static_api_image(ll, z, size, theme):
     server = 'https://static-maps.yandex.ru/v1?'
     map_params = {
         'll': ','.join(map(str, ll)),
         'apikey': API_KEY,
         'z': z,
-        'size:': ','.join(map(str, size))
+        'size:': ','.join(map(str, size)),
+        'theme': theme
     }
 
     session = requests.Session()

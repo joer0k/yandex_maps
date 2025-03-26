@@ -15,10 +15,14 @@ class MyWidget(QMainWindow):
         self.map_ll = [38.913250, 45.038852]
         self.z = 10
         uic.loadUi('untitled.ui', self)  # Загружаем дизайн
+        self.type_map = 'light'
+        self.btn_light.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_dark.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_light.toggled.connect(self.change_theme)
         self.refresh_map()
 
     def refresh_map(self):
-        response = get_static_api_image(self.map_ll, z=self.z, size=[self.width(), self.height()])
+        response = get_static_api_image(self.map_ll, z=self.z, size=[self.width(), self.height()], theme=self.type_map)
         if response:
             with open('image.png', mode='wb') as file:
                 file.write(response)
@@ -27,6 +31,13 @@ class MyWidget(QMainWindow):
             self.label.resize(pixmap.size())
             self.label.setPixmap(pixmap)
             os.remove('image.png')
+
+    def change_theme(self):
+        if self.btn_light.isChecked():
+            self.type_map = 'light'
+        elif self.btn_dark.isChecked():
+            self.type_map = 'dark'
+        self.refresh_map()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_PageUp:
