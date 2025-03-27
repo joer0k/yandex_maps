@@ -32,7 +32,9 @@ class MyWidget(QMainWindow):
             data = ','.join(map(str, self.map_ll))
             if data in self.points:
                 self.points.remove(data)
+                self.label_result.setText('')
                 self.refresh_map()
+
 
     def refresh_map(self):
         response = get_static_api_image(self.map_ll, z=self.z, size=[self.width(), self.height()], theme=self.type_map,
@@ -60,12 +62,13 @@ class MyWidget(QMainWindow):
             if res:
                 self.map_ll = list(map(float, res['Point']['pos'].split()))
                 self.points.add(','.join(map(str, res['Point']['pos'].split())))
-                self.label_result.setText('')
+                self.label_result.setText(f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}')
+                self.label_error.setText('')
                 self.refresh_map()
             else:
-                self.label_result.setText('Ничего не найдено, попробуйте снова')
+                self.label_error.setText('Ничего не найдено, попробуйте снова')
         else:
-            self.label_result.setText('Неверный запрос')
+            self.label_error.setText('Неверный запрос')
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_PageUp:
