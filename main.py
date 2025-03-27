@@ -24,6 +24,7 @@ class MyWidget(QMainWindow):
         self.btn_light.toggled.connect(self.change_theme)
         self.btn_search.clicked.connect(self.search)
         self.btn_del.clicked.connect(self.delete)
+        self.checkbox_index.stateChanged.connect(self.search)
         self.refresh_map()
 
     def delete(self):
@@ -34,7 +35,6 @@ class MyWidget(QMainWindow):
                 self.points.remove(data)
                 self.label_result.setText('')
                 self.refresh_map()
-
 
     def refresh_map(self):
         response = get_static_api_image(self.map_ll, z=self.z, size=[self.width(), self.height()], theme=self.type_map,
@@ -62,7 +62,18 @@ class MyWidget(QMainWindow):
             if res:
                 self.map_ll = list(map(float, res['Point']['pos'].split()))
                 self.points.add(','.join(map(str, res['Point']['pos'].split())))
-                self.label_result.setText(f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}')
+                if self.checkbox_index.isChecked():
+                    if 'postal_code' in res['metaDataProperty']['GeocoderMetaData']['Address']:
+                        self.label_result.setText(
+                            f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}\n'
+                            f'Почтовый индекс: '
+                            f'{res['metaDataProperty']['GeocoderMetaData']['Address']['postal_code']}')
+                    else:
+                        self.label_result.setText(
+                            f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}\n'
+                            f'Почтовый индекс: отсутствует')
+                else:
+                    self.label_result.setText(f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}')
                 self.label_error.setText('')
                 self.refresh_map()
             else:

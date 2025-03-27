@@ -15,15 +15,15 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="10" column="0">
-     <widget class="QLabel" name="label_error">
+    <item row="4" column="0" rowspan="7" colspan="2">
+     <widget class="QLabel" name="label">
       <property name="text">
        <string/>
       </property>
      </widget>
     </item>
-    <item row="3" column="0" rowspan="7" colspan="2">
-     <widget class="QLabel" name="label">
+    <item row="11" column="0">
+     <widget class="QLabel" name="label_error">
       <property name="text">
        <string/>
       </property>
@@ -83,11 +83,22 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label_result">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QCheckBox" name="checkbox_index">
+            <property name="text">
+             <string>Показать почтовый индекс</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_result">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
