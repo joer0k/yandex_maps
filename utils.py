@@ -41,6 +41,7 @@ def get_ll(address):
     session.mount('https://', adapter)
     response = session.get(server, params=map_params)
     if response:
-        return response.json()["response"]["GeoObjectCollection"]["featureMember"][0]['GeoObject']
-    else:
-        return None
+        if response.json()["response"]["GeoObjectCollection"]['metaDataProperty']['GeocoderResponseMetaData'][
+            'found'] != '0':
+            return response.json()["response"]["GeoObjectCollection"]["featureMember"][0]['GeoObject']
+    return None
