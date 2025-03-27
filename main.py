@@ -19,6 +19,7 @@ class MyWidget(QMainWindow):
         self.type_map = 'light'
         self.btn_light.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_dark.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.edit_search.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.btn_light.toggled.connect(self.change_theme)
         self.btn_search.clicked.connect(self.search)
         self.refresh_map()
@@ -69,8 +70,11 @@ class MyWidget(QMainWindow):
             self.map_ll[1] += self.z / 100
         if event.key() == Qt.Key.Key_Down:
             self.map_ll[1] -= self.z / 100
-        if event.key() == Qt.Key.Key_Enter:
+        if event.key() == Qt.Key.Key_Return:
             self.search()
+        if event.key() == Qt.Key.Key_Escape:  # нужно чтобы нажатия стрелочек не фокусировались на других кнопках
+            self.edit_search.clearFocus()
+            self.btn_search.clearFocus()
         self.refresh_map()
 
 
