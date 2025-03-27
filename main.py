@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 
@@ -13,19 +14,26 @@ class MyWidget(QMainWindow):
     def __init__(self):
         super().__init__()
         self.map_ll = [38.913250, 45.038852]
+        self.full_address = ''
+        self.postcode = ''
         self.z = 10
         self.points = set()
         uic.loadUi('untitled.ui', self)  # Загружаем дизайн
         self.type_map = 'light'
+        self.setfocus_buttons()
+        self.btn_light.toggled.connect(self.change_theme)
+        self.btn_search.clicked.connect(self.search)
+        self.btn_del.clicked.connect(self.delete)
+        self.checkbox_index.stateChanged.connect(self.show_address)
+        self.refresh_map()
+
+    def setfocus_buttons(self):  # чтобы не загромождать init
         self.btn_light.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_dark.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.btn_del.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.edit_search.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        self.btn_light.toggled.connect(self.change_theme)
-        self.btn_search.clicked.connect(self.search)
-        self.btn_del.clicked.connect(self.delete)
-        self.checkbox_index.stateChanged.connect(self.search)
-        self.refresh_map()
+        self.btn_search.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.checkbox_index.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
     def delete(self):
         res = get_ll(self.edit_search.text())
@@ -40,6 +48,7 @@ class MyWidget(QMainWindow):
         response = get_static_api_image(self.map_ll, z=self.z, size=[self.width(), self.height()], theme=self.type_map,
                                         points=self.points)
         if response:
+            self.statusBar.clearMessage()
             with open('image.png', mode='wb') as file:
                 file.write(response)
             pixmap = QPixmap()
@@ -55,31 +64,39 @@ class MyWidget(QMainWindow):
             self.type_map = 'dark'
         self.refresh_map()
 
-    def search(self):
+    def show_address(self):
+        if self.points:
+            if self.checkbox_index.isChecked():
+                self.label_result.setText(
+                    f'Полный адрес: {self.full_address}\nПочтовый индекс: {self.postcode}')
+            else:
+                self.label_result.setText(f'Полный адрес: {self.full_address}')
+
+    def search(self, coords=None):
         data = self.edit_search.text()
         if data.strip(' ') != '':
             res = get_ll(data)
             if res:
-                self.map_ll = list(map(float, res['Point']['pos'].split()))
-                self.points.add(','.join(map(str, res['Point']['pos'].split())))
-                if self.checkbox_index.isChecked():
-                    if 'postal_code' in res['metaDataProperty']['GeocoderMetaData']['Address']:
-                        self.label_result.setText(
-                            f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}\n'
-                            f'Почтовый индекс: '
-                            f'{res['metaDataProperty']['GeocoderMetaData']['Address']['postal_code']}')
-                    else:
-                        self.label_result.setText(
-                            f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}\n'
-                            f'Почтовый индекс: отсутствует')
+                if coords is None:
+                    self.map_ll = list(map(float, res['Point']['pos'].split()))
+                    self.points.add(','.join(map(str, res['Point']['pos'].split())))
                 else:
-                    self.label_result.setText(f'Полный адрес: {res['metaDataProperty']['GeocoderMetaData']['text']}')
-                self.label_error.setText('')
+                    self.points.add(coords)
+                if 'postal_code' in res['metaDataProperty']['GeocoderMetaData']['Address']:
+
+                    self.full_address = res['metaDataProperty']['GeocoderMetaData']['text']
+                    self.postcode = res['metaDataProperty']['GeocoderMetaData']['Address']['postal_code']
+
+                else:
+                    self.full_address = res['metaDataProperty']['GeocoderMetaData']['text']
+                    self.postcode = 'отсутствует'
+                self.statusBar.clearMessage()
+                self.show_address()
                 self.refresh_map()
             else:
-                self.label_error.setText('Ничего не найдено, попробуйте снова')
+                self.statusBar.showMessage('Ничего не найдено, попробуйте снова')
         else:
-            self.label_error.setText('Неверный запрос')
+            self.statusBar.showMessage('Неверный запрос')
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_PageUp:
@@ -101,6 +118,30 @@ class MyWidget(QMainWindow):
             self.btn_search.clearFocus()
             self.btn_del.clearFocus()
         self.refresh_map()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            x, y = event.pos().x() - self.label.pos().x(), event.pos().y() - self.label.pos().y()
+            if not (0 <= x <= self.label.width() and 0 <= y <= self.label.height()):
+                return None
+            if self.z < 10:
+                self.statusBar.showMessage('Увеличьте масштаб')
+                return None
+            coord_geo_x, coord_geo_y = 0.0000428, 0.0000428
+            y = self.label.height() // 2 - y
+            x = x - self.label.width() // 2
+
+            lx = float(self.map_ll[0]) + x * coord_geo_x * 2 ** (15 - self.z)
+            ly = float(self.map_ll[1]) + y * coord_geo_y * math.cos(math.radians(float(self.map_ll[1]))) * 2 ** (
+                    15 - self.z)
+            if lx > 180:
+                lx -= 360
+            elif lx < -180:
+                lx += 360
+
+            self.edit_search.setText(f'{lx},{ly}')
+            self.search(coords=f'{lx},{ly}')
+            self.edit_search.setText('')
 
 
 def except_hook(cls, exception, traceback):
