@@ -7,7 +7,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QMainWindow, QApplication
 
-from utils import get_static_api_image, get_ll
+from utils import get_static_api_image, get_ll, search_organization, get_distance
 
 
 class MyWidget(QMainWindow):
@@ -72,7 +72,7 @@ class MyWidget(QMainWindow):
             else:
                 self.label_result.setText(f'Полный адрес: {self.full_address}')
 
-    def search(self, coords=None):
+    def search(self, coords=None, type_point='pmwtm'):
         data = self.edit_search.text()
         if data.strip(' ') != '':
             res = get_ll(data)
@@ -117,7 +117,22 @@ class MyWidget(QMainWindow):
             self.edit_search.clearFocus()
             self.btn_search.clearFocus()
             self.btn_del.clearFocus()
+            self.edit_organization.clearFocus()
         self.refresh_map()
+
+    def get_coordinates(self, x, y):
+        coord_geo_x, coord_geo_y = 0.0000428, 0.0000428
+        y = self.label.height() // 2 - y
+        x = x - self.label.width() // 2
+
+        lx = float(self.map_ll[0]) + x * coord_geo_x * 2 ** (15 - self.z)
+        ly = float(self.map_ll[1]) + y * coord_geo_y * math.cos(math.radians(float(self.map_ll[1]))) * 2 ** (
+                15 - self.z)
+        if lx > 180:
+            lx -= 360
+        elif lx < -180:
+            lx += 360
+        return lx, ly
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -127,21 +142,28 @@ class MyWidget(QMainWindow):
             if self.z < 10:
                 self.statusBar.showMessage('Увеличьте масштаб')
                 return None
-            coord_geo_x, coord_geo_y = 0.0000428, 0.0000428
-            y = self.label.height() // 2 - y
-            x = x - self.label.width() // 2
-
-            lx = float(self.map_ll[0]) + x * coord_geo_x * 2 ** (15 - self.z)
-            ly = float(self.map_ll[1]) + y * coord_geo_y * math.cos(math.radians(float(self.map_ll[1]))) * 2 ** (
-                    15 - self.z)
-            if lx > 180:
-                lx -= 360
-            elif lx < -180:
-                lx += 360
-
+            lx, ly = self.get_coordinates(x, y)
             self.edit_search.setText(f'{lx},{ly}')
             self.search(coords=f'{lx},{ly}')
             self.edit_search.setText('')
+        if event.button() == Qt.MouseButton.RightButton:
+            x, y = event.pos().x() - self.label.pos().x(), event.pos().y() - self.label.pos().y()
+            if not (0 <= x <= self.label.width() and 0 <= y <= self.label.height()):
+                return None
+            if self.z < 14:
+                self.statusBar.showMessage('Увеличьте масштаб')
+                return None
+            lx, ly = self.get_coordinates(x, y)
+            res = search_organization(f'{lx},{ly}', self.edit_organization.text())
+            if res is not None:
+                for org in res:
+                    org_coords = org['geometry']['coordinates']
+                    s = get_distance(a=(lx, ly), b=org_coords)
+                    if get_distance((lx, ly), org_coords) <= 50:
+                        self.edit_search.setText(org['properties']['description'])
+                        self.search(coords=f'{lx},{ly}')
+                        self.edit_search.setText('')
+                        break
 
 
 def except_hook(cls, exception, traceback):
